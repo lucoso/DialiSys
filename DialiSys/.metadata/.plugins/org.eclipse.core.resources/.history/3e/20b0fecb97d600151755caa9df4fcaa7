@@ -1,0 +1,54 @@
+package teste;
+
+import java.math.BigDecimal;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
+import javax.persistence.Query;
+import javax.persistence.TypedQuery;
+
+import br.com.DialiSys.Manager.SessaoManager;
+import br.com.DialiSys.Manager.UsuarioManager;
+import br.com.DialiSys.Model.Ator;
+import br.com.DialiSys.Model.CarregadorSessao;
+import br.com.DialiSys.Model.Enfermeira;
+import br.com.DialiSys.Model.Medico;
+import br.com.DialiSys.Model.Paciente;
+import br.com.DialiSys.Model.PessoaFisica;
+import br.com.DialiSys.Model.Profissional;
+import br.com.DialiSys.Model.Sessao;
+import br.com.DialiSys.Model.Usuario;
+import br.com.DialiSys.Util.JavaUtil;
+
+public class TesteMetodo {
+
+	public static void main(String[] args) throws ParseException {
+		
+		
+		EntityManagerFactory factory = Persistence.createEntityManagerFactory("DialiSys");
+		EntityManager em = factory.createEntityManager();
+		
+		String datai = "19/10/2015";
+		String dataf = "22/12/2015";
+		Date datainicial = JavaUtil.ConvertStringToDate(datai);
+		Date datafinal = JavaUtil.ConvertStringToDate(dataf);
+		String consulta = "select s from Sessao s where s.dataSessao between :dataInicial and :dataFinal";
+		TypedQuery<Sessao> query = em.createQuery(consulta, Sessao.class);
+		query.setParameter("dataInicial", datainicial);
+		query.setParameter("dataFinal", datafinal);
+		List<Sessao> resultado = query.getResultList();
+		for(int i=0;i<resultado.size();i++){
+		
+			System.out.println(resultado.get(i).getId());
+			System.out.println(resultado.get(i).getFluxo());
+			System.out.println(resultado.get(i).getIntercorrencia());
+		}
+		
+	}
+}

@@ -1,0 +1,7 @@
+127.0.0.1 - - [10/Sep/2015:19:57:50 -0300] "GET / HTTP/1.1" 404 951
+0:0:0:0:0:0:0:1 - - [10/Sep/2015:20:24:33 -0300] "POST /DialiSys/enfermeiras HTTP/1.1" 201 141
+0:0:0:0:0:0:0:1 - - [10/Sep/2015:20:33:44 -0300] "GET /DialiSys/enfermeiras HTTP/1.1" 200 2182
+0:0:0:0:0:0:0:1 - - [10/Sep/2015:20:38:21 -0300] "GET /DialiSys/enfermeiras/29 HTTP/1.1" 404 55
+0:0:0:0:0:0:0:1 - - [10/Sep/2015:20:38:44 -0300] "GET /DialiSys/enfermeiras/2 HTTP/1.1" 200 33
+0:0:0:0:0:0:0:1 - - [10/Sep/2015:20:39:22 -0300] "GET /DialiSys/enfermeiras/12 HTTP/1.1" 200 1040
+0:0:0:0:0:0:0:1 - - [10/Sep/2015:20:54:18 -0300] "DELETE /DialiSys/enfermeiras/12 HTTP/1.1" 200 60

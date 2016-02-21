@@ -1,0 +1,48 @@
+package br.com.DialiSys.Util;
+
+import java.text.ParseException;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
+import javax.persistence.TypedQuery;
+
+import br.com.DialiSys.Model.ExameUreia;
+
+public class teste {
+
+	public static void main(String[] args) throws ParseException {
+
+
+		long id  = 5;
+		String datai = "02/12/2013";
+		String dataf = "01/01/2016";
+		Date datainicio = JavaUtil.ConvertStringToDate(datai);
+		Date datafim = JavaUtil.ConvertStringToDate(dataf);
+		
+		EntityManagerFactory factory = Persistence.createEntityManagerFactory("DialiSys");
+		EntityManager em = factory.createEntityManager();
+		
+		String consulta = "select s.exameUreia from Sessao s where s.paciente.pessoaf.id = :id_pessoa "
+				+ "and s.dataSessao between :dataInicial and :dataFinal";
+		TypedQuery<ExameUreia> query = em.createQuery(consulta, ExameUreia.class);
+		query.setParameter("id_pessoa", id);
+		query.setParameter("dataInicial", datainicio);
+		query.setParameter("dataFinal", datafim);
+		List<ExameUreia> exames_list = query.getResultList();
+		
+		if(exames_list.isEmpty()){
+			System.out.println("lista vazia");
+			System.out.println(exames_list.isEmpty());
+		}else
+		
+		for(int i=0;i<exames_list.size();i++){
+			System.out.println(exames_list.get(i).getUreiaPre());
+		}
+	}
+
+	}
+
+

@@ -1,0 +1,242 @@
+package br.com.DialiSys.Resource;
+
+import java.math.BigDecimal;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.persistence.TypedQuery;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Response;
+
+import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+import br.com.DialiSys.Manager.SessaoManager;
+import br.com.DialiSys.Model.Sessao;
+import br.com.DialiSys.Util.JavaUtil;
+
+@Path("/sessoes")
+public class SessaoResource {
+	
+	@POST
+	@Consumes("application/json")
+	@Produces("application/json")
+	public Response CadastrarSessao(String dados) throws JSONException{
+		
+		SessaoManager sm = new SessaoManager();
+		int cod_http = 0;
+		JSONObject obj = new JSONObject(dados);
+		Gson gson = new Gson();
+		String json = null;
+		long id = 0;
+		
+		try{
+			
+			cod_http = sm.CadastrarSessao(obj.optString("peso_entrada"), obj.optString("peso_saida"), 
+					obj.optString("tempo_duracao"), obj.optString("intercorrencia"), obj.optString("solucao"), 
+					obj.optString("fluxo"), obj.optString("data_sessao"), obj.optString("horaentrada"), 
+					obj.optString("horasaida"), obj.optJSONArray("sistolicas"), obj.optJSONArray("diastolicas"), 
+					obj.optJSONArray("hora"), obj.optString("ureiapre"), obj.optString("ureiapos"), 
+					obj.optString("paciente_id"), obj.optString("profissional_id"), obj.optString("clinica_id"));
+			
+			if(cod_http == 404){
+				
+				String erro = "Status: 404 Not Found - Não Encontrado no BD";
+				return Response.status(404).entity(erro).build();
+			}
+			
+			if(cod_http == 4041){
+				
+				String erro = "Status: 404 Not Found - Paciente NÃO encontrado! Cadastre antes de criar uma Sessão!";
+				return Response.status(404).entity(erro).build();
+			}
+			
+			if(cod_http == 409){
+				
+				String erro = "Status: 409 Conflict - Ja existe uma Sessao cadastrada para esse Paciente nesta Data! "
+						+ "Somente o Médico pode criar uma Sessão Excepcional";
+				return Response.status(409).entity(erro).build();
+			}
+			
+			if(cod_http == 201){
+				
+				id = SessaoManager.idGerado;
+			}
+			
+		}catch(Exception ex){
+			
+			ex.printStackTrace();
+			System.out.println("Erro ao gravar os dados");
+		}
+		
+		try{
+			return Response.created(new URI(""+id)).build();
+			}catch(URISyntaxException e){
+				throw new RuntimeException(e);
+			}
+		}
+		
+	
+	@GET
+	@Path("{id}")
+	@Produces("application/json")
+	public Response BuscarSessaoPorID(@PathParam("id") long id){
+		
+		SessaoManager sm = new SessaoManager();
+		Gson gson = new Gson();
+		String sessao = null;
+		
+		try{
+			
+			sessao = gson.toJson(sm.BuscarSessaoPorID(id));
+			
+		}catch(Exception ex){
+			ex.printStackTrace();
+			String erro = "Status: 404 Not Found - Sessão Não Encontrada";
+			System.out.println(erro);
+			return Response.status(404).entity(erro).build();
+		}
+		
+		System.out.println("Sessão encontrada com sucesso");
+		return Response.status(200).entity(sessao).build();
+		
+	}
+	
+	@GET
+	@Path("/periodo")
+	@Produces("application/json")
+	public Response BuscarSessoesPorPeriodo(@QueryParam("DataInicial") String datainicial, 
+			@QueryParam("DataInicial") String datafinal) throws ParseException{
+		
+		SessaoManager sm = new SessaoManager();
+		Gson gson = new Gson();
+		String sessoes = null;
+		Date dataI = JavaUtil.ConvertStringToDate(datainicial);
+		Date dataF = JavaUtil.ConvertStringToDate(datafinal);
+		
+		try{
+			
+			sessoes = gson.toJson(sm.BuscarSessoesPorPeriodo(dataI, dataF));
+			
+		}catch(Exception ex){
+			ex.printStackTrace();
+			String erro = "Status: 404 Not Found - Nenhuma Sessão Não Encontrada no Período Solicitado";
+			System.out.println(erro);
+			return Response.status(404).entity(erro).build();
+		}
+		
+		System.out.println("Sessões encontradas com sucesso");
+		return Response.status(200).entity(sessoes).build();
+		
+	}
+	
+	@GET
+	@Produces("application/json")
+	public Response BuscarTodasSessoes() throws ParseException{
+		
+		SessaoManager sm = new SessaoManager();
+		Gson gson = new Gson();
+		String sessoes = null;
+			
+		
+		try{
+			
+			sessoes = gson.toJson(sm.BuscarSessoes());
+			
+		}catch(Exception ex){
+			ex.printStackTrace();
+			String erro = "Status: 404 Not Found - Nenhuma Sessão Não Encontrada no Período Solicitado";
+			System.out.println(erro);
+			return Response.status(404).entity(erro).build();
+		}
+		
+		System.out.println("Sessões encontradas com sucesso");
+		return Response.status(200).entity(sessoes).build();
+		
+	}
+	
+	@PUT
+	@Path("{id}")
+	@Produces("application/json")
+	@Consumes("application/json")
+	public Response AtualizarSessao(@PathParam("id") long id, String dados) throws JSONException{
+		
+		SessaoManager sm = new SessaoManager();
+		Gson gson = new Gson();
+		String json = null;
+		int cod_http = 0;
+		JSONObject obj = new JSONObject(dados);
+		
+		try{
+			
+			cod_http = sm.AtualizarSessao(obj.optString("sessao_id"), obj.optString("peso_entrada"), obj.optString("peso_saida"), 
+					obj.optString("tempo_duracao"), obj.optString("intercorrencia"), obj.optString("solucao"), obj.optString("fluxo"), 
+					obj.optString("emtransito"), obj.optString("Sessao_Excepcional"), obj.optString("data_sessao"), obj.optString("horaentrada"), obj.optString("horasaida"), 
+					obj.optJSONArray("sistolicas"), obj.optJSONArray("diastolicas"), obj.optJSONArray("hora"), obj.optString("ureiapre"), 
+					obj.optString("ureiapos"), obj.optString("paciente_id"), obj.optString("profissional_id"), obj.optString("clinica_id"));
+			
+			if(cod_http == 404){
+				
+				String erro = "Status: 404 Not Found - Não Encontrado! Não é possivel atualizar";
+				return Response.status(404).entity(erro).build();
+			}
+			
+			if(cod_http == 4041){
+				
+				String erro = "Status: 404 Not Found - Paciente Não Encontrado! Não é possivel atualizar";
+				return Response.status(404).entity(erro).build();
+			}
+			
+			if(cod_http == 200){
+				
+				json = gson.toJson(obj);
+			}
+		}catch(Exception ex){
+			ex.printStackTrace();
+			System.out.println("Erro ao atualizar os dados");
+		}
+		
+		return Response.status(200).entity(json).build();
+	}
+
+	@DELETE
+	@Path("{id}")
+	public Response RemoverSessao(@PathParam("id") long id){
+		
+		SessaoManager sm = new SessaoManager();
+		int cod_http = 0;
+		
+		try{
+			
+			cod_http = sm.RemoverSessao(id);
+			
+			if(cod_http == 404){
+				
+				String erro = "Status: 404 Not Found - Sessão NÃO encontrada no BD! Não é possivel remover!";
+				return Response.status(404).entity(erro).build();
+			}
+		}catch(Exception ex){
+			ex.printStackTrace();
+			System.out.println("Erro ao remover a Sessão");
+		}
+		
+		String msg = "Status: 200 OK - Sessão Removida com Sucesso";
+		return Response.status(200).entity(msg).build();
+	}
+}

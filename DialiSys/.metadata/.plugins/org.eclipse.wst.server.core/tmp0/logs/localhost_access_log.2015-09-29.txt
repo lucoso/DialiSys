@@ -1,0 +1,9 @@
+127.0.0.1 - - [29/Sep/2015:15:06:33 -0300] "GET / HTTP/1.1" 404 951
+0:0:0:0:0:0:0:1 - - [29/Sep/2015:15:07:05 -0300] "POST /DialiSys/pacientes HTTP/1.1" 201 553
+0:0:0:0:0:0:0:1 - - [29/Sep/2015:15:15:12 -0300] "GET /DialiSys/pacientes HTTP/1.1" 200 2420
+0:0:0:0:0:0:0:1 - - [29/Sep/2015:15:53:50 -0300] "GET /DialiSys/pacientes/44 HTTP/1.1" 200 656
+127.0.0.1 - - [29/Sep/2015:16:39:40 -0300] "GET / HTTP/1.1" 404 951
+0:0:0:0:0:0:0:1 - - [29/Sep/2015:16:44:50 -0300] "GET /DialiSys/pacientes/pronttuario/01/L HTTP/1.1" 404 967
+0:0:0:0:0:0:0:1 - - [29/Sep/2015:16:45:53 -0300] "GET /DialiSys/pacientes/prontuario/01-L HTTP/1.1" 200 656
+0:0:0:0:0:0:0:1 - - [29/Sep/2015:16:50:38 -0300] "PUT /DialiSys/pacientes/44 HTTP/1.1" 200 -
+0:0:0:0:0:0:0:1 - - [29/Sep/2015:17:01:34 -0300] "PUT /DialiSys/pacientes/44 HTTP/1.1" 200 -

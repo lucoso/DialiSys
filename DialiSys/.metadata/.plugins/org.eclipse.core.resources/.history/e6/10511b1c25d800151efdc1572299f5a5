@@ -1,0 +1,781 @@
+package br.com.DialiSys.Resource;
+
+import java.math.BigDecimal;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
+import javax.persistence.TypedQuery;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Response;
+
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
+
+import com.google.gson.Gson;
+
+import br.com.DialiSys.Manager.PacienteManager;
+import br.com.DialiSys.Manager.SessaoManager;
+import br.com.DialiSys.Model.Paciente;
+import br.com.DialiSys.Model.Sessao;
+import br.com.DialiSys.Util.JavaUtil;
+
+@Path("/pacientes")
+public class PacienteResource {
+	
+	public static BigDecimal ktvcalculado = new BigDecimal(0);
+	public static long pacienteid = 0;
+	public static String pacientenome = null;
+	public static Date datasessao = new Date();
+	public static JSONObject relatorio = new JSONObject();
+
+	@POST
+	@Produces("application/json")
+	@Consumes("application/json")
+	public Response CadastrarPaciente(String dados) throws JSONException{
+		
+		PacienteManager pm = new PacienteManager();
+		JSONObject obj = new JSONObject(dados);
+		int cod_http = 0;
+		long id = 0;
+		
+		try{
+			
+			cod_http = pm.CadastrarPaciente(obj.optString("prontuario"), obj.optString("nome"), obj.optString("tel"), 
+					obj.optString("email"), obj.optString("sexo"), obj.optString("datanasc"), obj.optString("numero_cpf"), 
+					obj.optString("data_emissao_cpf"), obj.optString("rua"), obj.optString("numero"), 
+					obj.optString("complemento"), obj.optString("bairro"), obj.optString("cidade"), obj.optString("uf"), 
+					obj.optString("pais"), obj.optString("cep"), obj.optString("clinica_id"), 
+					obj.optString("medico_responsavel"), obj.optString("enfermeira_responsavel"), 
+					obj.optString("data_inicio"), obj.optString("peso_seco"), obj.optString("acesso_vascular"), 
+					obj.optString("anticoagulante"));
+			
+			if(cod_http == 409){
+				String erro = "Status: 409 Conflict - Paciente já existe!";
+				return Response.status(409).entity(erro).build();
+			}
+			
+			if(cod_http == 404){
+				String erro = "Status: 404 Not Found - Não Encontrado";
+				return Response.status(404).entity(erro).build();
+			}
+			
+			if(cod_http == 400){
+				String msg_erro = "Status: 400 Bad Request - CPF digitado é INVÁLIDO! Por Favor insira o CPF corretamente!";
+				return Response.status(400).entity(msg_erro).build();
+			}
+			
+			if(cod_http == 201){
+
+				id = PacienteManager.idGerado; 
+			}
+			
+		}catch(Exception ex){
+			ex.printStackTrace();
+			System.out.println("Erro ao gravar os dados");
+		}
+		
+		try{
+		return Response.created(new URI(""+id)).build();
+		}catch(URISyntaxException e){
+			throw new RuntimeException(e);
+		}
+	}
+	
+	@GET
+	@Produces("application/json")
+	public Response BuscarTodos(){
+		
+		Gson gson = new Gson();
+		PacienteManager pm = new PacienteManager();
+		String pacientes;
+		
+		try{
+		
+			pacientes = gson.toJson(pm.BuscarTodosPacientes());
+		}catch(Exception ex){
+			String erro = "Status: 404 Not Found - Nenhum Paciente Encontrado";
+			System.out.println(erro);
+			return Response.status(404).entity(erro).build();
+		}
+		
+		System.out.println("Pacientes encontrados com Sucesso");
+		return Response.status(200).entity(pacientes).build(); 
+	}
+	
+	
+	@GET
+	@Path("{id}")
+	@Produces("application/json")
+	public Response BuscarPacientePorPessoa(@PathParam("id") long id){
+		
+		Gson gson = new Gson();
+		PacienteManager pm = new PacienteManager();
+		String paciente;
+		
+		try{
+			
+			paciente = gson.toJson(pm.BuscarPacientePorPessoa(id));
+			
+		}catch(Exception ex){
+			
+			String erro = "Status: 404 Not Found - Paciente NÃO encontrado";
+			System.out.println(erro);
+			return Response.status(404).entity(erro).build();
+		}
+		
+		System.out.println("Paciente encontrado com Sucesso");
+		return Response.status(200).entity(paciente).build(); 
+		
+	}
+	
+	
+	@GET
+	@Path("prontuario/{prontuario}")
+	@Produces("application/json")
+	public Response BuscarPorProntuario(@PathParam("prontuario") String prontuario){
+		
+		PacienteManager pm = new PacienteManager();
+		Gson gson = new Gson();
+		String paciente = null;
+		
+	try{
+			
+			paciente = gson.toJson(pm.BuscarPorProntuario(prontuario));
+			
+		}catch(Exception ex){
+			
+			String erro = "Status: 404 Not Found - Paciente NÃO encontrado";
+			System.out.println(erro);
+			return Response.status(404).entity(erro).build();
+		}
+		
+		System.out.println("Paciente encontrado com Sucesso");
+		return Response.status(200).entity(paciente).build(); 
+		
+	}
+	
+	@PUT
+	@Path("{id}")
+	@Produces("application/json")
+	@Consumes("application/json")
+	public Response AtualizarPaciente(@PathParam("id") long id, String dados) throws JSONException{
+		
+		PacienteManager pm = new PacienteManager();
+		Gson gson = new Gson();
+		JSONObject obj = new JSONObject(dados);
+		String json = null;
+		int cod_http = 0;
+		
+		try{
+			
+			cod_http = pm.AtualizarPaciente(obj.optString("pessoa_id"), obj.optString("prontuario"), obj.optString("nome"), 
+					obj.optString("tel"), obj.optString("email"), obj.optString("sexo"), obj.optString("datanasc"), 
+					obj.optString("numero_cpf"), obj.optString("data_emissao_cpf"), obj.optString("rua"), 
+					obj.optString("numero"), obj.optString("complemento"), obj.optString("bairro"), obj.optString("cidade"), 
+					obj.optString("uf"), obj.optString("pais"), obj.optString("cep"), obj.optString("clinica_id"), 
+					obj.optString("medico_responsavel"), obj.optString("enfermeira_responsavel"), obj.optString("data_inicio"), 
+					obj.optString("peso_seco"), obj.optString("acesso_vascular"), obj.optString("anticoagulante"));
+			
+			if(cod_http == 404){
+				
+				String erro = "Status: 404 Not Found - Paciente NÃO encontrado! Não é possivel Atualizar!";
+				return Response.status(404).entity(erro).build();
+			}
+			
+			if(cod_http == 400){
+				String msg_erro = "Status: 400 Bad Request - CPF digitado é INVÁLIDO! Por Favor insira o CPF corretamente!";
+				return Response.status(400).entity(msg_erro).build();
+			}
+			
+			if(cod_http == 200){
+				
+				json = gson.toJson(obj);
+			}
+		}catch(Exception ex){
+			
+			ex.printStackTrace();
+			System.out.println("Erro ao atualizar os dados");
+		}
+		
+		System.out.println("Paciente Atualizado com Sucesso");
+		return Response.status(200).entity(json).build();
+	}
+	
+	@DELETE
+	@Path("{id}")
+	public Response RemoverPaciente(@PathParam("id") long id_pessoa){
+		
+		PacienteManager pm = new PacienteManager();
+		int cod_http = 0;
+		
+		try{
+			
+			cod_http = pm.RemoverPaciente(id_pessoa);
+			
+			if(cod_http == 404){
+				
+				String erro = "Status: 404 Not Found - Paciente NÃO encontrado! Não é possivel Remover!";
+				return Response.status(404).entity(erro).build();
+			}
+		
+		}catch(Exception ex){
+			ex.printStackTrace();
+			System.out.println("Erro ao remover o Paciente!");
+		}
+		
+		String msg = "Status: 200 OK - Paciente Removido Com Sucesso";
+		System.out.println(msg);
+		return Response.status(200).entity(msg).build();	
+	}
+	
+	
+	@GET
+	@Path("{id}/sessoes")
+	@Produces("application/json")
+	public Response BuscarSessaoDoPacientePorData(@PathParam("id") long id, 
+			@QueryParam("data") String data){
+		
+		SessaoManager sm = new SessaoManager();
+		Gson gson = new Gson();
+		String sessoes = null;
+		
+		try{
+			
+			sessoes = gson.toJson(sm.BuscarSessaoPorDataEPaciente(data, id));
+			
+		}catch(Exception ex){
+			
+			String erro = "Status: 404 Not Found - O Paciente NÃO fez nenhuma Sessão nesta data!";
+			System.out.println(erro);
+			return Response.status(404).entity(erro).build();
+		}
+		
+		System.out.println("Status: 200 OK - Sessões do Paciente feita no dia" +" "+ data + " " + " Encontradas com sucesso");
+		return Response.status(200).entity(sessoes).build();
+			
+		}
+	
+	@GET
+	@Path("{pessoa_id}/sessoes/{sessao_id}")
+	@Produces("application/json")
+	public Response BuscarSessaoDoPaciente(@PathParam("pessoa_id") long pessoa_id, @PathParam("sessao_id") long sessao_id){
+		
+		SessaoManager sm = new SessaoManager();
+		Gson gson = new Gson();
+		String sessao = null;
+		
+		try{
+			
+			sessao = gson.toJson(sm.BuscarSessaoDoPaciente(pessoa_id, sessao_id));
+			
+		}catch(Exception ex){
+			
+			String erro = "Status: 404 Not Found - Sessão do Paciente NÃO encontrada";
+			System.out.println(erro);
+			return Response.status(404).entity(erro).build();
+		}
+		
+		System.out.println("Status: 200 OK - Sessão do Paciente Encontrada com sucesso");
+		return Response.status(200).entity(sessao).build();
+			
+		}
+	
+	@GET
+	@Path("{id}/sessoes/excepcionais")
+	@Produces("application/json")
+	public Response BuscarSessaoExcepcionalDoPaciente(@PathParam("id") long id, 
+			@QueryParam("data") String data){
+		
+		SessaoManager sm = new SessaoManager();
+		Gson gson = new Gson();
+		String sessoes = null;
+		
+		try{
+			
+			sessoes = gson.toJson(sm.BuscarSessaoExcepcional(id, data));
+			
+		}catch(Exception ex){
+			
+			String erro = "Status: 404 Not Found - O Paciente NÃO fez nenhuma Sessão Excepcional nesta data";
+			System.out.println(erro);
+			return Response.status(404).entity(erro).build();
+		}
+		
+		System.out.println("Status: 200 OK - Sessão Excepcional do Paciente Encontrada com sucesso");
+		return Response.status(200).entity(sessoes).build();
+			
+		}
+	
+	
+	@DELETE
+	@Path("{id}/sessoes")
+	@Produces("application/json")
+	public Response RemoverSessaoDoPacientePorData(@PathParam("id") long id, @QueryParam("data") String data){
+		
+		SessaoManager sm = new SessaoManager();
+		int cod_http = 0;
+		
+		try{
+			
+			cod_http = sm.RemoverSessaoDoPacientePorData(id, data);
+			
+			if(cod_http == 404){
+				
+				String erro = "Status: 404 Not Found - O Paciente NÃO fez nenhuma Sessão nesta data! "
+						+ "Não é possivel remover";
+				return Response.status(404).entity(erro).build();
+			}
+			
+			if(cod_http == 401){
+				
+				String erro = "Status: 401 Unauthorized - O Paciente possui mais de uma Sessão nesta data!"
+						+ "Não é possivel remover mais de uma Sessão ao mesmo tempo";
+				return Response.status(401).entity(erro).build();
+			}
+			
+		}catch(Exception ex){
+			
+			ex.printStackTrace();
+			System.out.println("Erro ao remover a Sessão do Paciente");
+		}
+		
+		String msg = "Status: 200 OK - Sessão do Paciente feita no dia" +" "+ data + " " + " foi Removida com sucesso";
+		return Response.status(200).entity(msg).build();
+			
+		}
+	
+	@DELETE
+	@Path("{pessoa_id}/sessoes/{sessao_id}")
+	@Produces("application/json")
+	public Response RemoverSessaoDoPaciente(@PathParam("pessoa_id") long pessoa_id, @PathParam("sessao_id") long sessao_id){
+		
+		SessaoManager sm = new SessaoManager();
+		int cod_http = 0;
+		
+		try{
+			
+			cod_http = sm.RemoverSessaoDoPaciente(pessoa_id, sessao_id);
+			
+			if(cod_http == 404){
+				
+				String erro = "Status: 404 Not Found - Sessão do Paciente NÃO Encontrada! Não é possivel remover";
+				return Response.status(404).entity(erro).build();
+			}
+		}catch(Exception ex){
+			
+			ex.printStackTrace();
+			System.out.println("Erro ao remover a Sessão do Paciente");
+		}
+		
+		String msg = "Status: 200 OK - Sessão do Paciente foi Removida com sucesso";
+		return Response.status(200).entity(msg).build();
+			
+		}
+	
+	@POST
+	@Path("{id}/sessoes/relatorios")
+	@Produces("application/json")
+	@Consumes("application/json")
+	public Response EmitirRelatorioDoPaciente(@PathParam("id") long id, String dados) throws ParseException, JSONException{
+		
+		EntityManagerFactory factory = Persistence.createEntityManagerFactory("DialiSys");
+		EntityManager em = factory.createEntityManager();
+		
+		Paciente p = null;
+		List<Paciente> p_list  = new ArrayList<Paciente>();
+		List<Sessao> s_list  = new ArrayList<Sessao>();
+		List<String> interc_list = new ArrayList<String>();
+		List<String> pesoE_list = new ArrayList<String>();
+		List<String> pesoS_list = new ArrayList<String>();
+		Sessao s = null;
+		Date datainicio = new Date();
+		Date datafim = new Date();
+		Date dataS = new Date();
+		BigDecimal ktv = new BigDecimal(0);
+		BigDecimal mediaUF = new BigDecimal(0);
+		String MediaPressao = null;
+		String datainicial = null;
+		String datafinal = null;
+		String intercorrencias;
+		String prontuario = null;
+		String paciente_nome = null, paciente_sexo = null, paciente_pesoseco = null;
+		int paciente_idade = 0;
+		JSONObject interc = new JSONObject();
+		JSONObject pesoentrada = new JSONObject();
+		JSONObject pesosaida = new JSONObject();
+		JSONObject datas = new JSONObject(dados);
+		
+		try{
+			
+			datainicial = datas.getString("Data_Inicial");
+			datafinal = datas.getString("Data_Final");
+			datainicio = JavaUtil.ConvertStringToDate(datainicial);
+			datafim = JavaUtil.ConvertStringToDate(datafinal);
+			
+		}catch(Exception ex){
+			ex.printStackTrace();
+			System.out.println("Erro ao pegar as datas do json");
+		}
+		
+		try{
+			
+			String consulta = "select p from Paciente p where p.pessoaf.id = :id_pessoa";
+			TypedQuery<Paciente> query = em.createQuery(consulta, Paciente.class);
+			query.setParameter("id_pessoa", id);
+			p_list = query.getResultList();
+			
+			String consulta2 = "select s from Sessao s where s.paciente.pessoaf.id = :id_pessoa "
+					+ "and s.exameUreia.ureiaPre IS NOT NULL "
+					+ "and s.dataSessao between :dataInicial and :dataFinal ";
+			
+			TypedQuery<Sessao> query2 = em.createQuery(consulta2, Sessao.class);
+			query2.setParameter("id_pessoa", id);
+			query2.setParameter("dataInicial", datainicio);
+			query2.setParameter("dataFinal", datafim);
+			s_list = query2.getResultList();
+			
+			if(p_list.isEmpty()){
+				
+				String erro = "Status: 404 Not Found - Paciente NÃO encontrado! Não é possivel emitir o relatório";
+				System.out.println(erro);
+				return Response.status(404).entity(erro).build();
+			
+			}else{
+				
+				Iterator<Paciente> itr = p_list.iterator();
+				for(int i=0; i<p_list.size(); i++){
+					while(itr.hasNext()){
+						p = itr.next();
+					}
+				}
+			}
+			
+			if(s_list.isEmpty()){
+				
+				String erro = "Status: 404 Not Found - Sessão com ExameUréia NÃO encontrado! Não é possivel emitir o relatório";
+				System.out.println(erro);
+				return Response.status(404).entity(erro).build();
+				
+			}else{
+				
+				Iterator<Sessao> itr = s_list.iterator();
+				for(int i=0; i<s_list.size(); i++){
+					while(itr.hasNext()){
+						s = itr.next();
+						dataS = s.getDataSessao();
+					}
+				}
+			}
+	}catch(Exception ex){
+		
+		ex.printStackTrace();
+		System.out.println("Erro ao buscar o Paciente");
+	}
+		
+		try{
+			
+			String consulta = "select s.intercorrencia from Sessao s where s.paciente.pessoaf.id = :id_pessoa "
+					+ "and s.dataSessao between :dataInicial and :dataFinal";
+			TypedQuery<String> query = em.createQuery(consulta, String.class);
+			query.setParameter("id_pessoa", id);
+			query.setParameter("dataInicial", datainicio);
+			query.setParameter("dataFinal", datafim);
+			interc_list = query.getResultList();
+			
+			if(interc_list.isEmpty()){
+				
+				intercorrencias = "O Paciente Não teve nenhuma Intercorrência Registrada nas Sessões de Hemodiálise"
+						+ "Buscadas";
+				interc.putOpt("", intercorrencias);
+				System.out.println(intercorrencias);
+			}else{
+				
+				interc.put("Intercorrências", interc_list);
+			}
+			
+		}catch(Exception ex){
+			
+			ex.printStackTrace();
+			System.out.println("Erro ao buscar as intercorrencias das Sessões de Dialise");
+		}
+		
+		try{
+			
+			String consulta = "select s.pesoEntrada from Sessao s where s.paciente.pessoaf.id = :id_pessoa "
+					+ "and s.dataSessao between :dataInicial and :dataFinal";
+			TypedQuery<String> query = em.createQuery(consulta, String.class);
+			query.setParameter("id_pessoa", id);
+			query.setParameter("dataInicial", datainicio);
+			query.setParameter("dataFinal", datafim);
+			pesoE_list = query.getResultList();
+			
+			
+				
+				pesoentrada.put("Peso_Entrada No Período", pesoE_list);
+			
+		}catch(Exception ex){
+			
+			ex.printStackTrace();
+			System.out.println("Erro ao buscar os Pesos de Entrada das Sessões de Dialise");
+		}
+		
+		try{
+			
+			String consulta = "select s.pesoSaida from Sessao s where s.paciente.pessoaf.id = :id_pessoa "
+					+ "and s.dataSessao between :dataInicial and :dataFinal";
+			TypedQuery<String> query = em.createQuery(consulta, String.class);
+			query.setParameter("id_pessoa", id);
+			query.setParameter("dataInicial", datainicio);
+			query.setParameter("dataFinal", datafim);
+			pesoS_list = query.getResultList();
+			
+			
+				
+				pesosaida.put("Peso_Entrada No Período", pesoS_list);
+			
+		}catch(Exception ex){
+			
+			ex.printStackTrace();
+			System.out.println("Erro ao buscar os pesos de saida das Sessões de Dialise");
+		}
+		
+		try{
+			
+			String consulta = "select s.tempoDuracao from Sessao s where s.paciente.pessoaf.id = :id_pessoa "
+					+ "and s.dataSessao between :dataInicial and :dataFinal";
+			TypedQuery<String> query = em.createQuery(consulta, String.class);
+			query.setParameter("id_pessoa", id);
+			query.setParameter("dataInicial", datainicio);
+			query.setParameter("dataFinal", datafim);
+			pesoE_list = query.getResultList();
+			
+			
+				
+				pesoentrada.put("Peso_Entrada No Período", pesoE_list);
+			
+		}catch(Exception ex){
+			
+			ex.printStackTrace();
+			System.out.println("Erro ao buscar as intercorrencias das Sessões de Dialise");
+		}
+		
+		
+		try{
+			
+			paciente_nome = p.getPessoaf().getNome();
+			prontuario = p.getProntuario();
+			Date datan = p.getPessoaf().getDatanasc();
+			paciente_idade = JavaUtil.CalcularIdade(datan);
+			paciente_pesoseco = p.getPesoseco().toString();
+			
+			if(p.getPessoaf().isSexo() == true){
+				
+				paciente_sexo = "Masculino";
+			}else{
+				
+				paciente_sexo = "Feminino";
+			}
+			
+			p.CalcularMediaPressaoArterialSistolica(id, datainicio, datafim);
+			p.CalcularMediaPressaoArterialDiastolica(id, datainicio, datafim);
+			MediaPressao = p.MediaDaPressaoArterial();
+			mediaUF = p.CalcularMediaUltrafiltracao(id, datainicio, datafim);
+			ktv = s.CalcularKTV(id, dataS);
+			
+		}catch(Exception ex){
+			
+			ex.printStackTrace();
+			System.out.println("Erro ao calcular e/ou buscar dados do relatorio");
+		}
+		
+		try{
+			
+			relatorio.put("Paciente_ID", id);
+			relatorio.putOpt("Prontuario", prontuario);
+			relatorio.putOpt("Nome Do Paciente", paciente_nome);
+			relatorio.put("Idade", paciente_idade);
+			relatorio.putOpt("Sexo", paciente_sexo);
+			relatorio.putOpt("Peso Seco Atual", paciente_pesoseco);
+			relatorio.putOpt("Média Da Pressão Arterial", MediaPressao);
+			relatorio.put("Média Da Ultrafiltração", mediaUF);
+			relatorio.putOpt("Intercorrências Ocorridas Durante as Sessões", interc);
+			relatorio.put("KTV Do Paciente No Período Solicitado", ktv);
+			
+		}catch(Exception ex){
+			
+			ex.printStackTrace();
+			System.out.println("Erro ao formar o JSON");
+		}
+		 
+		System.out.println("Relatório Emitido Com Sucesso!");
+		try{
+			return Response.created(new URI("")).build();
+			}catch(URISyntaxException e){
+				throw new RuntimeException(e);
+			}
+		}
+	
+	@GET
+	@Path("{id}/sessoes/relatorios")
+	@Produces("application/json")
+	public Response ExibirRelatorioDoPaciente(@PathParam("id") long id, String dados){
+		
+		Gson gson = new Gson();
+		String json = null;
+		
+		try{
+			
+			json = gson.toJson(relatorio);
+		}catch(Exception ex){
+			ex.printStackTrace();
+			System.out.println("Erro ao gerar json do Relatorio");
+		}
+		
+		return Response.status(200).entity(json).build();
+	}
+		
+	
+	@POST
+	@Path("{id}/KTV")
+	@Produces("application/json")
+	@Consumes("application/json")
+	public Response CalculoKTVDoPaciente(@PathParam("id") long id, String dados) throws JSONException, URISyntaxException{
+		
+		EntityManagerFactory factory = Persistence.createEntityManagerFactory("DialiSys");
+		EntityManager em = factory.createEntityManager();
+		
+		Paciente p = null;
+		Sessao s = null;
+		List<Paciente> p_list = new ArrayList<Paciente>();
+		List<Sessao> s_list = new ArrayList<Sessao>();
+		long p_id = 0;
+		Date dataS = new Date();
+		Date datainicio = new Date();
+		BigDecimal ktv = new BigDecimal(0);
+		JSONObject datas = new JSONObject(dados);
+		String data;
+		
+		try{
+			
+			data = datas.getString("Data");
+			datainicio = JavaUtil.ConvertStringToDate(data);
+			
+		}catch(Exception ex){
+			ex.printStackTrace();
+			System.out.println("Erro ao obter datas do json");
+		}
+		try{
+			
+			String consulta = "select p from Paciente p where p.pessoaf.id = :id_pessoa";
+			TypedQuery<Paciente> query = em.createQuery(consulta, Paciente.class);
+			query.setParameter("id_pessoa", id);
+			p_list = query.getResultList();
+			
+			String consulta2 = "select s from Sessao s where s.paciente.pessoaf.id = :id_pessoa "
+					+ "and s.exameUreia.ureiaPre IS NOT NULL "
+					+ "and s.dataSessao = :data";
+			
+			TypedQuery<Sessao> query2 = em.createQuery(consulta2, Sessao.class);
+			query2.setParameter("id_pessoa", id);
+			query2.setParameter("data", datainicio);
+			s_list = query2.getResultList();
+			
+			if(p_list.isEmpty()){
+				String erro = "Status: 404 Not Found - Paciente NÃO encontrado! Não é possivel calcular o KTV";
+				System.out.println(erro);
+				return Response.status(404).entity(erro).build();
+			}else{
+				
+				Iterator<Paciente> itr = p_list.iterator();
+				for(int i=0; i<p_list.size(); i++){
+					while(itr.hasNext()){
+						p = itr.next(); 
+						p_id = p.getPessoaf().getId();
+					}
+				}
+			}
+			
+			if(s_list.isEmpty()){
+				
+				String erro = "Status: 404 Not Found - Sessão com ExameUréia NÃO encontrado! Não é possivel calcular o KTV";
+				System.out.println(erro);
+				return Response.status(404).entity(erro).build();
+				
+			}else{
+				
+				Iterator<Sessao> itr = s_list.iterator();
+				for(int i=0; i<s_list.size(); i++){
+					while(itr.hasNext()){
+						s = itr.next();
+						dataS = s.getDataSessao();
+					}
+				}
+			}
+		}catch(Exception ex){
+			ex.printStackTrace();
+			System.out.println("Erro ao Buscar o Paciente");
+		}
+		
+		try{
+		
+			ktv = s.CalcularKTV(p_id, dataS);
+			ktvcalculado = ktv;
+			pacienteid = p_id; 
+			pacientenome = p.getPessoaf().getNome();
+			datasessao = dataS;
+		}catch(Exception ex){
+			ex.printStackTrace();
+			System.out.println("Erro ao Calcular o KTV");
+		}
+		
+		System.out.println("KTV calculado com sucesso");
+		return Response.created(new URI("")).build();
+		
+	}
+
+	@GET
+	@Path("{id}/KTV")
+	@Produces("application/json")
+	public Response KTVCalculado(@PathParam("id") long id){
+		
+		JSONObject obj = new JSONObject();
+		Gson gson = new Gson();
+		String json = null;
+		
+		try{
+			
+			obj.putOpt("Paciente_ID", pacienteid);
+			obj.putOpt("Nome_Paciente", pacientenome);
+			obj.putOpt("Data_Sessão", datasessao);
+			obj.putOpt("KTV", ktvcalculado);
+			json = gson.toJson(obj);
+			
+		}catch(Exception ex){
+			ex.printStackTrace();
+		}
+		
+		return Response.status(200).entity(json).build();
+	}
+}
+		
+		
+		
+	
+	
+

@@ -1,0 +1,2 @@
+127.0.0.1 - - [15/Aug/2015:00:37:34 -0300] "GET / HTTP/1.1" 404 951
+0:0:0:0:0:0:0:1 - - [15/Aug/2015:00:37:42 -0300] "GET /DialiSys/WEB-INF/classes/teste/TesteJava.java HTTP/1.1" 404 949
